@@ -34,26 +34,6 @@ def node_degree(A):
     
     return k
 
-# def ave_control(A, c = 0.99):
-#     # Bassett Lab, University of Pennsylvania, 2016.
-#     # Reference: Gu, Pasqualetti, Cieslak, Telesford, Yu, Kahn, Medaglia,
-#     #            Vettel, Miller, Grafton & Bassett, Nature Communications
-#     #            6:8414, 2015.
-
-#     if c is not None:
-#         u, s, vt = svd(A) # singluar value decomposition
-#         A = (A/s[0])*c # Matrix normalization
-    
-#     T, U = schur(A,'real') # Schur stability
-#     midMat = np.multiply(U,U).transpose()
-#     v = np.matrix(np.diag(T)).transpose()
-#     N = A.shape[0]
-#     P = np.diag(1 - np.matmul(v,v.transpose()))
-#     P = repmat(P.reshape([N,1]), 1, N)
-#     ac = sum(np.divide(midMat,P))
-    
-#     return ac
-
 def ave_control(A, c = 1):
     # Bassett Lab, University of Pennsylvania, 2016.
     # Reference: Gu, Pasqualetti, Cieslak, Telesford, Yu, Kahn, Medaglia,
@@ -179,9 +159,12 @@ f.savefig('full_toy.svg', dpi = 300, bbox_inches = 'tight')
 
 # ### Lesion A matrix and re do simulation
 
+# Here I lesion each non-local non-zero connection in ascending order and plot average controllability
+
 # In[13]:
 
 
+# Find the non-local non-zero connections
 A_norm_tmp = A_norm.copy()
 
 A_norm_tmp[0,:] = 0
@@ -200,6 +183,7 @@ lesion_indices
 # In[15]:
 
 
+# Lesion each non-local non-zero connection and calculate average controllability
 ac_lesioned = np.zeros(len(lesion_indices[0]))
 
 for i in np.arange(0,len(lesion_indices[0])):
@@ -212,40 +196,25 @@ for i in np.arange(0,len(lesion_indices[0])):
 # In[16]:
 
 
-np.sort(A_norm_tmp[lesion_indices])
-
-
-# In[17]:
-
-
 sort_idx = np.argsort(A_norm_tmp[lesion_indices])
 sort_idx
 
 
-# In[18]:
+# In[17]:
 
 
 print(lesion_indices[0][sort_idx])
 print(lesion_indices[1][sort_idx])
 
 
-# In[19]:
+# In[18]:
 
 
+# Plot
 x_labels = list()
 
 for i in np.arange(0,len(sort_idx)):
     x_labels.append('(' + str(lesion_indices[0][sort_idx][i]) + ',' + str(lesion_indices[1][sort_idx][i]) + ')')
-
-
-# In[20]:
-
-
-x_labels
-
-
-# In[21]:
-
 
 sns.set(style='white', context = 'paper', font_scale = 1)
 
@@ -262,9 +231,10 @@ ax.tick_params(pad = -3)
 f.savefig('lesioned_ac.svg', dpi = 300, bbox_inches = 'tight')
 
 
-# In[22]:
+# In[19]:
 
 
+# Just for illustrative purposes, lesion a bunch of non-local connections and run the simulation
 A_lesioned = A_norm.copy()
 A_lesioned[2,1] = 0
 A_lesioned[1,2] = 0
@@ -276,7 +246,7 @@ A_lesioned[4,3] = 0
 ave_control(A_lesioned, c = None)[0]
 
 
-# In[23]:
+# In[20]:
 
 
 f, ax = plt.subplots()
@@ -285,7 +255,7 @@ f.set_figheight(5)
 sns.heatmap(A_lesioned, center = 0, ax = ax)
 
 
-# In[24]:
+# In[21]:
 
 
 # Simulate linear system
@@ -305,68 +275,9 @@ f.savefig('lesioned_toy.svg', dpi = 300, bbox_inches = 'tight')
 
 # # Manipulating C
 
-# The normalization constant (c) determines the value of the largest eigenvalue in the system. By convention we set to 0.99 so that it, and all subsequent modes of the system, decay over time. By decreasing c we force all the system's modes to decay more quickly and thus shorten the life of impulse response. 
+# The normalization constant (c) determines the scaling of the eigenvalues in the system. By convention we set to 1 so that all modes decay over time. By increasing c we force all the system's modes to decay more quickly and thus shorten the life of impulse response. Here, I plot the activity spread from a ROI as a function of c (columns). The bottom show is the average activity at each timepoint over regions.
 
-# In[25]:
-
-
-# sns.set(style='white', context = 'talk', font_scale = 0.75)
-
-# f, ax = plt.subplots(1,4)
-# f.set_figwidth(15)
-# f.set_figheight(2.5)
-
-# u, s, vt = svd(A) # SVD
-
-# for i, c in enumerate([0.99, 0.75, 0.5, 0.25]): # note, 0.99 is the default param used in all of above
-#     A_norm = (A/s[0])*c # Matrix normalization
-
-#     x = np.zeros((num_nodes,num_steps))
-#     x[0,0] = 1 # set region 0 to be 'on' at T 0
-#     for t in np.arange(1,num_steps): # run simulation of linear system
-#         x[:,t] = np.dot(A_norm,x[:,t-1])
-
-#     sns.heatmap(x, ax = ax[i], cmap = 'YlGnBu_r', cbar_kws={'label': 'Activity'})
-#     ax[i].set_title('c: '+str(c))
-#     ax[i].set_xlabel('T')
-#     ax[i].set_ylabel('Node')
-#     ax[i].set_xticklabels('')
-
-# plt.subplots_adjust(wspace=0.5)
-# f.savefig('full_toy_overc.png', dpi = 300, bbox_inches = 'tight')
-
-
-# In[26]:
-
-
-# sns.set(style='white', context = 'talk', font_scale = 0.75)
-
-# f, ax = plt.subplots(1,5)
-# f.set_figwidth(20)
-# f.set_figheight(2.5)
-
-# u, s, vt = svd(A) # SVD
-
-# for i, c in enumerate([1, 10, 100, 1000, 10000]): # note, 0.99 is the default param used in all of above
-#     A_norm = A/(c + s[0]) # Matrix normalization
-#     print(ave_control(A, c = c)[0])
-
-#     x = np.zeros((num_nodes,num_steps))
-#     x[0,0] = 1 # set region 0 to be 'on' at T 0
-#     for t in np.arange(1,num_steps): # run simulation of linear system
-#         x[:,t] = np.dot(A_norm,x[:,t-1])
-
-#     sns.heatmap(x, ax = ax[i], cmap = 'YlGnBu_r', cbar_kws={'label': 'Activity'})
-#     ax[i].set_title('c: '+str(c))
-#     ax[i].set_xlabel('T')
-#     ax[i].set_ylabel('Node')
-#     ax[i].set_xticklabels('')
-
-# plt.subplots_adjust(wspace=0.5)
-# f.savefig('full_toy_overc.png', dpi = 300, bbox_inches = 'tight')
-
-
-# In[27]:
+# In[22]:
 
 
 sns.set(style='white', context = 'paper', font_scale = 0.75)
